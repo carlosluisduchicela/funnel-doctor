@@ -3,30 +3,64 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>funnel-doctor — where does the funnel leak?</title>
-<meta name="description" content="Paste a funnel CSV, get per-step conversion, the biggest drop-off, segment significance tests, and a written diagnosis. Runs entirely in your browser.">
+<title>funnel-doctor — your funnel is on the table</title>
+<meta name="description" content="A playful funnel clinic: load a CSV, read the patient chart, examine each stage, extract the findings, and leave with a treatment plan. Runs entirely in your browser.">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
-  <h1>funnel-doctor</h1>
-  <p class="tagline">Paste a funnel, find the leak. Per-step conversion, the biggest drop-off, segment significance tests, and a written diagnosis — entirely in your browser, nothing uploaded.</p>
+<header class="hero">
+  <div class="brand-row">
+    <div class="brand"><span class="logo" aria-hidden="true"><span></span></span> funnel-doctor</div>
+    <div class="browser-badge">100% browser-based · nothing uploaded</div>
+  </div>
+
+  <div class="hero-grid">
+    <div>
+      <p class="eyebrow">The funnel clinic</p>
+      <h1>Your funnel is<br>on the table.</h1>
+      <p class="tagline">Bring us the patient — a simple CSV of funnel steps — and we’ll chart its vital signs, find the critical leak, test the segments, and hand you a treatment plan.</p>
+      <div class="hero-actions">
+        <a class="button-link primary-link" href="#patient">See the sample diagnosis</a>
+        <a class="button-link" href="#admit">Use your own CSV</a>
+      </div>
+      <p class="hero-note">No account. No backend. The sample patient is fictional and already admitted below.</p>
+    </div>
+
+    <div class="monitor" aria-label="Sample patient monitor">
+      <div class="monitor-top"><span>Patient F-001</span><span class="live-dot">LIVE SAMPLE</span></div>
+      <svg class="ecg" viewBox="0 0 420 92" role="img" aria-label="Animated heartbeat line">
+        <path d="M0 52 H58 L72 52 L84 22 L99 76 L112 52 H172 L186 52 L198 30 L211 66 L222 52 H282 L296 52 L308 18 L323 80 L336 52 H420" />
+      </svg>
+      <div class="monitor-stats">
+        <div><strong>12,000</strong><span>admitted</span></div>
+        <div><strong>4.7%</strong><span>made it through</span></div>
+        <div><strong>Paid</strong><span>critical step</span></div>
+      </div>
+      <p>Diagnosis begins the moment you arrive. Scroll for the full chart.</p>
+    </div>
+  </div>
 </header>
 
 <main>
-  <section class="card" aria-labelledby="input-h">
-    <h2 id="input-h">1. Your funnel</h2>
+  <section class="card admit-card" id="admit" aria-labelledby="input-h">
+    <div class="section-heading">
+      <div>
+        <p class="kicker">Admissions</p>
+        <h2 id="input-h">Admit a patient</h2>
+      </div>
+      <p>Start with a sample, paste your own counts, or upload a CSV.</p>
+    </div>
     <div class="controls">
-      <button id="load-sample" type="button">Load sample data</button>
-      <button id="load-segment-sample" type="button">Load sample with segments</button>
+      <button id="load-sample" type="button">Load sample patient</button>
+      <button id="load-segment-sample" type="button">Load patient with segments</button>
       <label class="file-label">Upload CSV
         <input id="file-input" type="file" accept=".csv,text/csv,text/plain">
       </label>
     </div>
-    <textarea id="csv-input" rows="9" spellcheck="false"
+    <textarea id="csv-input" rows="8" spellcheck="false"
       placeholder="step,users&#10;Visit,12000&#10;Signup,5400&#10;Activated,2700"></textarea>
     <div class="controls">
-      <button id="analyse" type="button" class="primary">Analyse</button>
+      <button id="analyse" type="button" class="primary">Examine patient</button>
       <span id="error" class="error" role="alert"></span>
     </div>
     <details>
@@ -48,38 +82,98 @@ Signup,pro,1400</pre>
   <section id="results" hidden>
     <div id="callout" class="callout" role="status"></div>
 
-    <section class="card" aria-labelledby="chart-h">
-      <h2 id="chart-h">2. The funnel</h2>
-      <div id="chart"></div>
-      <table id="funnel-table">
-        <thead>
-          <tr><th>Step</th><th>Users</th><th>From previous</th><th>Cumulative</th><th>Lost</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <section class="card patient-card" id="patient" aria-labelledby="chart-h">
+      <div class="section-heading chart-heading">
+        <div>
+          <p class="kicker">Patient chart</p>
+          <h2 id="chart-h">Vital signs &amp; examination</h2>
+        </div>
+        <span id="condition-pill" class="condition-pill">Examining…</span>
+      </div>
+
+      <div id="vitals" class="vitals" aria-label="Funnel vital signs"></div>
+
+      <div class="patient-layout">
+        <div>
+          <h3 class="subhead">Traverse the patient</h3>
+          <p class="map-help">Select any stage to examine it. The line thins as fewer people make it through.</p>
+          <div id="chart" class="patient-map"></div>
+        </div>
+        <aside id="exam-panel" class="exam-panel" aria-live="polite"></aside>
+      </div>
+
+      <h3 class="subhead detailed-heading">Detailed readings</h3>
+      <div class="table-wrap">
+        <table id="funnel-table">
+          <thead>
+            <tr><th>Step</th><th>Users</th><th>From previous</th><th>Cumulative</th><th>Lost</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card extraction-card" aria-labelledby="extract-h">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Procedure room</p>
+          <h2 id="extract-h">Extract the findings</h2>
+        </div>
+        <p class="extraction-count"><span id="tray-count">0 of 0 extracted</span></p>
+      </div>
+      <p class="procedure-help"><strong>Press and hold</strong> a finding card with a steady hand until the ring fills. Jitter or let go too soon and you’ll have to try again. Keyboard: focus a card, then hold Enter or Space.</p>
+      <div class="extract-progress" aria-hidden="true"><span id="extract-fill"></span></div>
+      <p id="extract-status" class="extract-status" role="status">Findings are ready for examination.</p>
+      <div id="ailments" class="ailments"></div>
+      <div class="tray">
+        <div class="tray-heading"><span class="tray-icon" aria-hidden="true"></span><h3>Specimen tray</h3></div>
+        <div id="tray-list" class="tray-list"><span class="tray-empty">No specimens yet. Extract a finding to collect it here.</span></div>
+      </div>
     </section>
 
     <section class="card" id="segment-card" aria-labelledby="segment-h" hidden>
-      <h2 id="segment-h">3. Segments</h2>
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Lab results</p>
+          <h2 id="segment-h">Segment tests</h2>
+        </div>
+      </div>
       <p class="note">Conversions are compared per step (from the previous step) with a
       two-proportion z-test. <strong>Sig.</strong> means p &lt; 0.05. No
       multiple-comparison correction — with many steps and segments, treat
       borderline flags as leads, not proof.</p>
-      <table id="segment-table">
-        <thead>
-          <tr><th>Step</th><th>Comparison</th><th>Conversion</th><th>z</th><th>p</th><th>Sig.</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrap">
+        <table id="segment-table">
+          <thead>
+            <tr><th>Step</th><th>Comparison</th><th>Conversion</th><th>z</th><th>p</th><th>Sig.</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
-    <section class="card" aria-labelledby="diagnosis-h">
-      <h2 id="diagnosis-h">Diagnosis</h2>
-      <ul id="diagnosis"></ul>
+    <section class="card treatment-card" aria-labelledby="diagnosis-h">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Discharge papers</p>
+          <h2 id="diagnosis-h">Doctor’s notes &amp; treatment plan</h2>
+        </div>
+      </div>
+      <div class="treatment-grid">
+        <div>
+          <h3 class="subhead">What we found</h3>
+          <ul id="diagnosis" class="diagnosis-list"></ul>
+        </div>
+        <div>
+          <h3 class="subhead">What to do next</h3>
+          <ol id="treatment" class="treatment-list"></ol>
+        </div>
+      </div>
     </section>
   </section>
 
-  <section class="card" aria-labelledby="limits-h">
+  <section class="card limits-card" aria-labelledby="limits-h">
+    <p class="kicker">Clinic notes</p>
     <h2 id="limits-h">Honest limits</h2>
     <ul>
       <li>Significance is a two-proportion z-test on adjacent-step (or segment) conversion. It flags association, not causation — a significant gap is where to investigate, not proof of why.</li>
@@ -91,7 +185,7 @@ Signup,pro,1400</pre>
 </main>
 
 <footer>
-  <p>funnel-doctor · MIT License · Same logic in the browser and in
+  <p><strong>funnel-doctor</strong> · MIT License · Same logic in the browser and in
   <code>funnel.py</code> (Python, standard library only) · Product spec in
   <code>docs/PRD.md</code></p>
 </footer>
