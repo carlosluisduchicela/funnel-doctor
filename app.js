@@ -161,14 +161,17 @@ function el(id) { return document.getElementById(id); }
 function analyse() {
   var errorBox = el("error");
   errorBox.textContent = "";
+  var csvText = el("csv-input").value;
   var parsed;
   try {
-    parsed = parseCsv(el("csv-input").value);
+    parsed = parseCsv(csvText);
   } catch (e) {
     errorBox.textContent = "Error: " + e.message;
     el("results").hidden = true;
     return;
   }
+  var isSample = csvText.trim() === SAMPLE_PLAIN.trim() ||
+    csvText.trim() === SAMPLE_SEGMENTS.trim();
   var steps = parsed.steps;
   var totals = steps.map(function (_, i) {
     return parsed.order.reduce(function (sum, seg) { return sum + parsed.series[seg][i]; }, 0);
@@ -177,6 +180,8 @@ function analyse() {
   var dropIdx = biggestDrop(steps, totals);
 
   el("results").hidden = false;
+
+  renderMonitor(totals, stats, steps, dropIdx, isSample);
 
   el("callout").innerHTML =
     "<strong>Biggest drop-off:</strong> " + escapeHtml(steps[dropIdx - 1]) + " &rarr; " +
@@ -288,11 +293,15 @@ function stageStatus(index, stat) {
   return { label: "Critical", cls: "critical" };
 }
 
+/* The overall condition is plain words about the end-to-end number, not a
+   second severity scale — Stable/Guarded/Serious/Critical belong to stages
+   only. `cls` survives purely to colour the pill. */
 function overallCondition(cumulative) {
-  if (cumulative >= 0.25) return { label: "Stable", cls: "stable" };
-  if (cumulative >= 0.10) return { label: "Guarded", cls: "guarded" };
-  if (cumulative >= 0.05) return { label: "Serious", cls: "serious" };
-  return { label: "Critical", cls: "critical" };
+  var through = pct(cumulative) + " make it through";
+  if (cumulative >= 0.35) return { text: through + " — a strong funnel", cls: "stable" };
+  if (cumulative >= 0.15) return { text: through + " — workable, with room to grow", cls: "guarded" };
+  if (cumulative >= 0.05) return { text: through + " — most of the funnel never arrives", cls: "serious" };
+  return { text: through + " — that's the problem", cls: "critical" };
 }
 
 function doctorNote(index, steps, stats, dropIdx) {
@@ -300,7 +309,7 @@ function doctorNote(index, steps, stats, dropIdx) {
     return "This is intake: the full admitted population. Every later reading is measured against these " + fmt(stats[0].users) + " people.";
   }
   if (index === dropIdx) {
-    return "This is the critical transition. Only " + pct(stats[index].stepConv) + " make it from " + steps[index - 1] + " to " + steps[index] + ", so investigate this handoff before optimising anywhere else.";
+    return "This is the biggest leak. Only " + pct(stats[index].stepConv) + " make it from " + steps[index - 1] + " to " + steps[index] + ", so investigate this handoff before optimising anywhere else.";
   }
   if (stats[index].stepConv < 0.20) {
     return "This stage is below the clinic's 20% warning line. Treat it as a separate problem, not background noise around the main leak.";
@@ -311,7 +320,7 @@ function doctorNote(index, steps, stats, dropIdx) {
   if (stats[index].stepConv >= 0.60) {
     return "A comparatively healthy handoff. Protect what is working here while attention goes to the weaker stages.";
   }
-  return "A middling handoff: not the emergency, but " + fmt(stats[index].lost) + " people still leave here. Look for friction after the critical leak is understood.";
+  return "A middling handoff: not the emergency, but " + fmt(stats[index].lost) + " people still leave here. Look for friction after the biggest leak is understood.";
 }
 
 function renderExam(index, steps, stats, dropIdx) {
@@ -362,7 +371,7 @@ function renderPatientMap(steps, stats, dropIdx) {
         '<span class="status-pill">' + status.label + "</span></div>" +
         '<div class="stage-track"><div class="stage-fill" data-width="' + Math.max(2, stats[i].cumulative * 100) + '"></div></div>' +
         '<div class="stage-meta"><span>' + escapeHtml(transition) + "</span>" +
-        (i === dropIdx ? '<span class="drop-badge">Critical transition</span>' : "") + "</div>" +
+        (i === dropIdx ? '<span class="drop-badge">Biggest leak</span>' : "") + "</div>" +
       "</div>";
     row.addEventListener("click", function () { selectStage(i, steps, stats, dropIdx); });
     row.addEventListener("keydown", function (ev) {
@@ -387,7 +396,7 @@ function buildAilments(steps, stats, dropIdx, comparisons, segmented) {
   var dropDetail = "Only " + pct(drop.stepConv) + " convert from " + steps[dropIdx - 1] + " to " + steps[dropIdx] + " — " + fmt(drop.lost) + " people are lost at this handoff.";
   if (drop.stepConv < 0.20) dropDetail += " It is also below the 20% warning line.";
   ailments.push({
-    id: "critical-leak", kind: "Critical leak", title: steps[dropIdx - 1] + " → " + steps[dropIdx],
+    id: "biggest-leak", kind: "Biggest leak", title: steps[dropIdx - 1] + " → " + steps[dropIdx],
     detail: dropDetail, severity: drop.stepConv < 0.35 ? "critical" : "serious"
   });
 
@@ -398,7 +407,7 @@ function buildAilments(steps, stats, dropIdx, comparisons, segmented) {
   if (maxLostIdx !== dropIdx && stats[maxLostIdx].lost > 0) {
     ailments.push({
       id: "heavy-loss", kind: "Heavy loss", title: fmt(stats[maxLostIdx].lost) + " leave before " + steps[maxLostIdx],
-      detail: "This is the largest headcount loss in the funnel. The share lost is smaller than at the critical leak, but the audience affected is bigger.",
+      detail: "This is the largest headcount loss in the funnel. The share lost is smaller than at the biggest leak, but the audience affected is bigger.",
       severity: "serious"
     });
   }
@@ -422,7 +431,7 @@ function buildAilments(steps, stats, dropIdx, comparisons, segmented) {
       ailments.push({
         id: "segment-gap", kind: "Uneven response", title: worst.segA + " and " + worst.segB + " diverge at " + worst.step,
         detail: worst.segA + " converts at " + pct(worst.convA) + " versus " + pct(worst.convB) + " for " + worst.segB + " (p = " + worst.p.toFixed(4) + "). " + sig.length + " of " + comparisons.length + " segment comparisons are significant.",
-        severity: "moderate"
+        severity: "guarded"
       });
     }
   }
@@ -430,7 +439,7 @@ function buildAilments(steps, stats, dropIdx, comparisons, segmented) {
 }
 
 function treatmentFor(ailment) {
-  if (ailment.id === "critical-leak") {
+  if (ailment.id === "biggest-leak") {
     return {
       title: "Operate on " + ailment.title + " first",
       text: "Inspect the exact handoff: instrumentation, page or step friction, eligibility surprises, and user intent. Interview or watch people who reached the first step but never completed the second."
@@ -464,7 +473,7 @@ function renderTreatment(ailments) {
     li.innerHTML =
       '<span class="plan-title">' + escapeHtml(plan.title) + "</span>" +
       '<span class="plan-text">' + escapeHtml(plan.text) + "</span>" +
-      '<span class="plan-state">Awaiting extraction</span>';
+      '<span class="plan-state">In the plan</span>';
     list.appendChild(li);
   });
   var follow = document.createElement("li");
@@ -506,21 +515,20 @@ function updateTray() {
       state.textContent = "Specimen collected";
     } else {
       plan.classList.remove("done");
-      state.textContent = "Awaiting extraction";
+      state.textContent = "In the plan";
     }
   });
 }
 
-function failExtraction(card, message) {
+function resetHold(card, message) {
   card.classList.remove("holding");
-  card.classList.add("buzz");
   card.querySelector(".hold-fill").style.width = "0%";
   card.querySelector(".hold-percent").textContent = "0%";
-  el("extract-status").textContent = message;
-  setTimeout(function () { card.classList.remove("buzz"); }, 420);
+  if (message) el("extract-status").textContent = message;
 }
 
 function completeExtraction(card, ailment) {
+  if (extractedAilments[ailment.id]) return;
   extractedAilments[ailment.id] = true;
   card.classList.remove("holding");
   card.classList.add("extracted");
@@ -532,6 +540,13 @@ function completeExtraction(card, ailment) {
   updateTray();
 }
 
+/* Extraction has two doors: hold ~1 second (the fun way) or a plain click
+   (the fast way). Releasing the pointer is a click, so it extracts — the
+   hold is never a gate. Small hand movement is fine; only a big drag
+   resets the hold, quietly, with no penalty. */
+var HOLD_MS = 950;
+var HOLD_TOLERANCE_PX = 48;
+
 function attachHold(card, ailment) {
   var startAt = 0;
   var startX = 0;
@@ -541,7 +556,7 @@ function attachHold(card, ailment) {
 
   function tick() {
     var elapsed = performance.now() - startAt;
-    var progress = Math.min(1, elapsed / 950);
+    var progress = Math.min(1, elapsed / HOLD_MS);
     card.querySelector(".hold-fill").style.width = (progress * 100) + "%";
     card.querySelector(".hold-percent").textContent = Math.round(progress * 100) + "%";
     if (progress >= 1) {
@@ -562,7 +577,7 @@ function attachHold(card, ailment) {
     startAt = performance.now();
     startX = x; startY = y; activePointer = pointerId;
     card.classList.add("holding");
-    el("extract-status").textContent = "Steady… keep holding to extract " + ailment.kind.toLowerCase() + ".";
+    el("extract-status").textContent = "Steady… keep holding to extract " + ailment.kind.toLowerCase() + " — or just let go to click it in.";
     frame = requestAnimationFrame(tick);
   }
   card.addEventListener("pointerdown", function (ev) {
@@ -575,33 +590,29 @@ function attachHold(card, ailment) {
   card.addEventListener("pointermove", function (ev) {
     if (activePointer === null || ev.pointerId !== activePointer) return;
     var distance = Math.hypot(ev.clientX - startX, ev.clientY - startY);
-    if (distance > 18) {
+    if (distance > HOLD_TOLERANCE_PX) {
       cleanup();
-      failExtraction(card, "Buzz — too much movement. Rest your hand and hold the finding again.");
+      resetHold(card, "Hold reset — that was a drag, not a hold. Hold ~1 second, or click, to extract.");
     }
   });
   card.addEventListener("pointerup", function (ev) {
     if (activePointer === null || ev.pointerId !== activePointer) return;
     cleanup();
-    if (!extractedAilments[ailment.id]) failExtraction(card, "Released too soon. Press and hold until the ring reaches 100%.");
+    completeExtraction(card, ailment); // a release before the ring fills is a click
   });
   card.addEventListener("pointercancel", function () {
     if (activePointer !== null) {
       cleanup();
-      failExtraction(card, "Extraction interrupted. Try the steady hold again.");
+      resetHold(card);
     }
+  });
+  card.addEventListener("click", function () {
+    completeExtraction(card, ailment); // synthetic clicks (assistive tech) take the fast way too
   });
   card.addEventListener("keydown", function (ev) {
-    if ((ev.key === "Enter" || ev.key === " ") && !ev.repeat && activePointer === null) {
+    if ((ev.key === "Enter" || ev.key === " ") && !ev.repeat) {
       ev.preventDefault();
-      begin(0, 0, "keyboard");
-    }
-  });
-  card.addEventListener("keyup", function (ev) {
-    if ((ev.key === "Enter" || ev.key === " ") && activePointer === "keyboard") {
-      ev.preventDefault();
-      cleanup();
-      if (!extractedAilments[ailment.id]) failExtraction(card, "Released too soon. Hold Enter or Space until extraction reaches 100%.");
+      completeExtraction(card, ailment);
     }
   });
 }
@@ -614,13 +625,13 @@ function renderAilments(ailments) {
     card.className = "ailment sev-" + ailment.severity;
     card.setAttribute("role", "button");
     card.setAttribute("tabindex", "0");
-    card.setAttribute("aria-label", "Press and hold to extract: " + ailment.title);
+    card.setAttribute("aria-label", "Extract finding: " + ailment.title + ". Hold ~1 second, or click.");
     card.innerHTML =
       '<span class="ailment-top"><span class="ailment-kind">' + escapeHtml(ailment.kind) + '</span>' +
       '<span class="severity">' + escapeHtml(ailment.severity) + "</span></span>" +
       "<h3>" + escapeHtml(ailment.title) + "</h3>" +
       "<p>" + escapeHtml(ailment.detail) + "</p>" +
-      '<span class="hold-ui"><span class="hold-label"><span class="hold-action">Press &amp; hold — steady</span><span class="hold-percent">0%</span></span>' +
+      '<span class="hold-ui"><span class="hold-label"><span class="hold-action">hold ~1 second — or click</span><span class="hold-percent">0%</span></span>' +
       '<span class="hold-track"><span class="hold-fill"></span></span></span>';
     attachHold(card, ailment);
     wrap.appendChild(card);
@@ -628,17 +639,31 @@ function renderAilments(ailments) {
   updateTray();
 }
 
+/* The hero monitor always describes the funnel currently on the table —
+   never a hardcoded patient. */
+function renderMonitor(totals, stats, steps, dropIdx, isSample) {
+  el("monitor-title").textContent = isSample ? "sample patient" : "your patient";
+  el("monitor-badge").textContent = isSample ? "SAMPLE" : "LIVE";
+  el("mon-admitted").textContent = fmt(totals[0]);
+  el("mon-through").textContent = pct(stats[stats.length - 1].cumulative);
+  el("mon-leak").textContent = steps[dropIdx];
+  el("mon-note").textContent = isSample
+    ? "sample patient — fictional numbers. admit your own csv and this monitor shows yours."
+    : "your funnel, as admitted below. the biggest leak is " +
+      steps[dropIdx - 1] + " → " + steps[dropIdx] + ".";
+}
+
 function renderClinic(parsed, steps, totals, stats, dropIdx, comparisons) {
   var condition = overallCondition(stats[stats.length - 1].cumulative);
   var pill = el("condition-pill");
-  pill.textContent = "Condition: " + condition.label;
+  pill.textContent = condition.text;
   pill.className = "condition-pill" + (condition.cls === "serious" ? " serious" : condition.cls === "critical" ? " critical" : "");
 
   el("vitals").innerHTML =
     '<div class="vital"><span class="v-label">Admitted</span><strong class="v-value">' + fmt(totals[0]) + '</strong><span class="v-note">people at ' + escapeHtml(steps[0]) + "</span></div>" +
     '<div class="vital"><span class="v-label">Made it through</span><strong class="v-value">' + fmt(totals[totals.length - 1]) + '</strong><span class="v-note">completed ' + escapeHtml(steps[steps.length - 1]) + "</span></div>" +
     '<div class="vital"><span class="v-label">Overall conversion</span><strong class="v-value">' + pct(stats[stats.length - 1].cumulative) + '</strong><span class="v-note">first step to last step</span></div>' +
-    '<div class="vital alert"><span class="v-label">Critical transition</span><strong class="v-value">' + escapeHtml(steps[dropIdx - 1]) + " → " + escapeHtml(steps[dropIdx]) + '</strong><span class="v-note">only ' + pct(stats[dropIdx].stepConv) + " convert · " + fmt(stats[dropIdx].lost) + " lost</span></div>";
+    '<div class="vital alert"><span class="v-label">Biggest leak</span><strong class="v-value">' + escapeHtml(steps[dropIdx - 1]) + " → " + escapeHtml(steps[dropIdx]) + '</strong><span class="v-note">only ' + pct(stats[dropIdx].stepConv) + " convert · " + fmt(stats[dropIdx].lost) + " lost</span></div>";
 
   currentAilments = buildAilments(steps, stats, dropIdx, comparisons || [], parsed.segmented);
   extractedAilments = {};

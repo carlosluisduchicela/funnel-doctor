@@ -11,32 +11,31 @@
 <header class="hero">
   <div class="brand-row">
     <div class="brand"><span class="logo" aria-hidden="true"><span></span></span> funnel-doctor</div>
-    <div class="browser-badge">100% browser-based · nothing uploaded</div>
   </div>
 
   <div class="hero-grid">
     <div>
       <p class="eyebrow">The funnel clinic</p>
-      <h1>Your funnel is<br>on the table.</h1>
-      <p class="tagline">Bring us the patient — a simple CSV of funnel steps — and we’ll chart its vital signs, find the critical leak, test the segments, and hand you a treatment plan.</p>
+      <h1>your funnel is<br>on the table.</h1>
+      <p class="tagline">paste your step counts — or start with the sample patient — and get the step that's leaking, segment gaps with a significance test, and a treatment plan in plain words.</p>
       <div class="hero-actions">
-        <a class="button-link primary-link" href="#patient">See the sample diagnosis</a>
-        <a class="button-link" href="#admit">Use your own CSV</a>
+        <a class="button-link primary-link" href="#patient">start with the sample patient</a>
+        <a class="button-link" href="#admit">paste your own funnel</a>
       </div>
-      <p class="hero-note">No account. No backend. The sample patient is fictional and already admitted below.</p>
+      <p class="hero-note">no account, no backend. the sample patient is fictional and already admitted below.</p>
     </div>
 
-    <div class="monitor" aria-label="Sample patient monitor">
-      <div class="monitor-top"><span>Patient F-001</span><span class="live-dot">LIVE SAMPLE</span></div>
+    <div class="monitor" aria-label="Funnel monitor">
+      <div class="monitor-top"><span id="monitor-title">sample patient</span><span class="live-dot" id="monitor-badge">SAMPLE</span></div>
       <svg class="ecg" viewBox="0 0 420 92" role="img" aria-label="Animated heartbeat line">
         <path d="M0 52 H58 L72 52 L84 22 L99 76 L112 52 H172 L186 52 L198 30 L211 66 L222 52 H282 L296 52 L308 18 L323 80 L336 52 H420" />
       </svg>
       <div class="monitor-stats">
-        <div><strong>12,000</strong><span>admitted</span></div>
-        <div><strong>4.7%</strong><span>made it through</span></div>
-        <div><strong>Paid</strong><span>critical step</span></div>
+        <div><strong id="mon-admitted">—</strong><span>admitted</span></div>
+        <div><strong id="mon-through">—</strong><span>made it through</span></div>
+        <div><strong id="mon-leak">—</strong><span>biggest leak</span></div>
       </div>
-      <p>Diagnosis begins the moment you arrive. Scroll for the full chart.</p>
+      <p id="mon-note">sample patient — fictional numbers. admit your own csv and this monitor shows yours.</p>
     </div>
   </div>
 </header>
@@ -45,14 +44,13 @@
   <section class="card admit-card" id="admit" aria-labelledby="input-h">
     <div class="section-heading">
       <div>
-        <p class="kicker">Admissions</p>
         <h2 id="input-h">Admit a patient</h2>
       </div>
-      <p>Start with a sample, paste your own counts, or upload a CSV.</p>
+      <p>paste your own counts, upload a csv, or start with the sample patient.</p>
     </div>
     <div class="controls">
-      <button id="load-sample" type="button">Load sample patient</button>
-      <button id="load-segment-sample" type="button">Load patient with segments</button>
+      <button id="load-sample" type="button">start with the sample patient</button>
+      <button id="load-segment-sample" type="button">sample patient with segments</button>
       <label class="file-label">Upload CSV
         <input id="file-input" type="file" accept=".csv,text/csv,text/plain">
       </label>
@@ -121,7 +119,7 @@ Signup,pro,1400</pre>
         </div>
         <p class="extraction-count"><span id="tray-count">0 of 0 extracted</span></p>
       </div>
-      <p class="procedure-help"><strong>Press and hold</strong> a finding card with a steady hand until the ring fills. Jitter or let go too soon and you’ll have to try again. Keyboard: focus a card, then hold Enter or Space.</p>
+      <p class="procedure-help"><strong>hold ~1 second (or click)</strong> a finding card to extract it. the hold is the fun way; a plain click is the fast way. keyboard: focus a card, then press Enter or Space. extraction only fills the specimen tray — the doctor’s notes and treatment plan below are yours either way.</p>
       <div class="extract-progress" aria-hidden="true"><span id="extract-fill"></span></div>
       <p id="extract-status" class="extract-status" role="status">Findings are ready for examination.</p>
       <div id="ailments" class="ailments"></div>
@@ -185,6 +183,7 @@ Signup,pro,1400</pre>
 </main>
 
 <footer>
+  <p>everything runs in your browser; nothing leaves the page.</p>
   <p><strong>funnel-doctor</strong> · MIT License · Same logic in the browser and in
   <code>funnel.py</code> (Python, standard library only) · Product spec in
   <code>docs/PRD.md</code></p>
