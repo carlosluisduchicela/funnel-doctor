@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>funnel-doctor — where does the funnel leak?</title>
+<meta name="description" content="Paste a funnel CSV, get per-step conversion, the biggest drop-off, segment significance tests, and a written diagnosis. Runs entirely in your browser.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>funnel-doctor</h1>
+  <p class="tagline">Paste a funnel, find the leak. Per-step conversion, the biggest drop-off, segment significance tests, and a written diagnosis — entirely in your browser, nothing uploaded.</p>
+</header>
+
+<main>
+  <section class="card" aria-labelledby="input-h">
+    <h2 id="input-h">1. Your funnel</h2>
+    <div class="controls">
+      <button id="load-sample" type="button">Load sample data</button>
+      <button id="load-segment-sample" type="button">Load sample with segments</button>
+      <label class="file-label">Upload CSV
+        <input id="file-input" type="file" accept=".csv,text/csv,text/plain">
+      </label>
+    </div>
+    <textarea id="csv-input" rows="9" spellcheck="false"
+      placeholder="step,users&#10;Visit,12000&#10;Signup,5400&#10;Activated,2700"></textarea>
+    <div class="controls">
+      <button id="analyse" type="button" class="primary">Analyse</button>
+      <span id="error" class="error" role="alert"></span>
+    </div>
+    <details>
+      <summary>Input format</summary>
+      <p>Two shapes are accepted, header row required:</p>
+      <pre>step,users
+Visit,12000
+Signup,5400</pre>
+      <pre>step,segment,users
+Visit,free,8000
+Visit,pro,2000
+Signup,free,3200
+Signup,pro,1400</pre>
+      <p>Steps are read in the order they first appear. In the segment format
+      every segment needs a count for every step.</p>
+    </details>
+  </section>
+
+  <section id="results" hidden>
+    <div id="callout" class="callout" role="status"></div>
+
+    <section class="card" aria-labelledby="chart-h">
+      <h2 id="chart-h">2. The funnel</h2>
+      <div id="chart"></div>
+      <table id="funnel-table">
+        <thead>
+          <tr><th>Step</th><th>Users</th><th>From previous</th><th>Cumulative</th><th>Lost</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="card" id="segment-card" aria-labelledby="segment-h" hidden>
+      <h2 id="segment-h">3. Segments</h2>
+      <p class="note">Conversions are compared per step (from the previous step) with a
+      two-proportion z-test. <strong>Sig.</strong> means p &lt; 0.05. No
+      multiple-comparison correction — with many steps and segments, treat
+      borderline flags as leads, not proof.</p>
+      <table id="segment-table">
+        <thead>
+          <tr><th>Step</th><th>Comparison</th><th>Conversion</th><th>z</th><th>p</th><th>Sig.</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="card" aria-labelledby="diagnosis-h">
+      <h2 id="diagnosis-h">Diagnosis</h2>
+      <ul id="diagnosis"></ul>
+    </section>
+  </section>
+
+  <section class="card" aria-labelledby="limits-h">
+    <h2 id="limits-h">Honest limits</h2>
+    <ul>
+      <li>Significance is a two-proportion z-test on adjacent-step (or segment) conversion. It flags association, not causation — a significant gap is where to investigate, not proof of why.</li>
+      <li>Biggest drop-off means the lowest conversion from the previous step (largest relative loss), not the largest absolute loss. The table shows both.</li>
+      <li>Steps with only a few hundred users make the z-test unreliable. Small funnels get a first pass, not a verdict.</li>
+      <li>This tool reads aggregated step counts only — no events, sessions, or cohorts.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p>funnel-doctor · MIT License · Same logic in the browser and in
+  <code>funnel.py</code> (Python, standard library only) · Product spec in
+  <code>docs/PRD.md</code></p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

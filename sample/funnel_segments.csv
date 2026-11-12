@@ -1,0 +1,11 @@
+step,segment,users
+Visit,free,8000
+Visit,pro,2000
+Signup,free,3200
+Signup,pro,1400
+Activated,free,1600
+Activated,pro,1120
+Trial Started,free,800
+Trial Started,pro,840
+Paid,free,240
+Paid,pro,504
